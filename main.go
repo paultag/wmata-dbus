@@ -12,7 +12,30 @@ import (
 	"pault.ag/go/wmata"
 )
 
+var wifiMetroMap = map[string][]string{
+	"Dolcezza Dupont - Guest": []string{"A03"},
+}
+
 type WMATADbusInterface struct{}
+
+func (w WMATADbusInterface) NextLocalTrains() ([]map[string]string, *dbus.Error) {
+	ssids, err := GetVisibleNetworks()
+	if err != nil {
+		return []map[string]string{}, dbus.NewError(
+			"org.anized.wmata.Rail.NetworkError",
+			[]interface{}{err.Error()},
+		)
+	}
+
+	stops := []string{}
+	for _, ssid := range ssids {
+		if wifiStops, ok := wifiMetroMap[ssid]; ok {
+			stops = append(stops, wifiStops...)
+		}
+	}
+
+	return w.NextTrains(stops)
+}
 
 func (w WMATADbusInterface) NextTrains(stops []string) ([]map[string]string, *dbus.Error) {
 	log.Printf("Getting info")
@@ -81,6 +104,8 @@ func main() {
 	}
 
 	export := introspect.NewIntrospectable(&node)
+	// str, err := export.Introspect()
+	// fmt.Printf("%s %s\n", str, err)
 	conn.Export(wmata, "/org/anized/wmata/Rail", "org.anized.wmata.Rail")
 	conn.Export(
 		export,
