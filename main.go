@@ -14,6 +14,7 @@ import (
 
 var wifiMetroMap = map[string][]string{
 	"Dolcezza Dupont - Guest": []string{"A03"},
+	"Pretty Fly for a WiFi":   []string{"B35"},
 }
 
 type WMATADbusInterface struct{}
@@ -34,11 +35,23 @@ func (w WMATADbusInterface) NextLocalTrains() ([]map[string]string, *dbus.Error)
 		}
 	}
 
+	if len(stops) == 0 {
+		return []map[string]string{}, nil
+	}
+
 	return w.NextTrains(stops)
 }
 
 func (w WMATADbusInterface) NextTrains(stops []string) ([]map[string]string, *dbus.Error) {
+	if len(stops) == 0 {
+		return []map[string]string{}, dbus.NewError(
+			"org.anized.wmata.Rail.NoStopsGiven",
+			[]interface{}{fmt.Errorf("No stops given").Error()},
+		)
+	}
+
 	log.Printf("Getting info")
+
 	predictions, err := wmata.GetPredictionsByCodes(stops...)
 	if err != nil {
 		return []map[string]string{}, dbus.NewError(
